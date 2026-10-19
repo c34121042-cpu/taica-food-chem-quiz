@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>健康食品化學知識問答</title>
+    <style>
+        :root {
+            --bg-color: #FDF5E6; /* 鵝黃 */
+            --card-bg: #FFFFFF;
+            --text-main: #5C4033; /* 深褐 */
+            --primary-btn: #87CEEB; /* 天藍 */
+            --primary-btn-hover: #5F9EA0;
+            --correct: #98FB98; /* 淺綠 */
+            --incorrect: #FFB6C1; /* 淺粉 */
+            --disabled: #E0E0E0;
+        }
+        body {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-image: radial-gradient(#FFDAB9 10%, transparent 10%), radial-gradient(#ADD8E6 10%, transparent 10%);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+        }
+        #app {
+            background-color: var(--card-bg);
+            width: 90%;
+            max-width: 600px;
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            padding: 30px;
+            text-align: center;
+        }
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+        .progress {
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 20px;
+        }
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .option {
+            background-color: var(--bg-color);
+            border: 2px solid var(--primary-btn);
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+            font-weight: bold;
+        }
+        .option:hover:not(.disabled) {
+            background-color: var(--primary-btn);
+            color: #FFF;
+        }
+        .option.correct {
+            background-color: var(--correct);
+            border-color: var(--correct);
+        }
+        .option.incorrect {
+            background-color: var(--incorrect);
+            border-color: var(--incorrect);
+        }
+        .option.disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .explanation {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #F0F8FF;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            text-align: left;
+            display: none;
+        }
+        .next-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-btn);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            display: none;
+        }
+        .next-btn:hover {
+            background-color: var(--primary-btn-hover);
+        }
+        .result-container {
+            display: none;
+        }
+        .score {
+            font-size: 3rem;
+            color: var(--primary-btn-hover);
+            margin: 20px 0;
+        }
+        .tier {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div id="quiz-container">
+        <div class="progress" id="progress"></div>
+        <h1 id="question-text"></h1>
+        <div class="options" id="options-container"></div>
+        <div class="explanation" id="explanation-box"></div>
+        <button class="next-btn" id="next-btn" onclick="nextQuestion()">下一題</button>
+    </div>
+
+    <div class="result-container" id="result-container">
+        <h1>測驗結束</h1>
+        <div class="score" id="final-score"></div>
+        <div class="tier" id="final-tier"></div>
+        <p id="final-desc"></p>
+        <button class="next-btn" style="display:inline-block;" onclick="location.reload()">重新測驗</button>
+    </div>
+</div>
+
+<script>
+    const allQuestions = [
+        {
+            q: "烤肉時表面產生的誘人色澤與香氣，主要源自何種化學反應？",
+            options: [
+                "A) 碳水化合物受熱發生之焦糖化反應",
+                "B) 糖類與胺基酸受熱發生之梅納反應",
+                "C) 不飽和脂肪酸受熱發生之氧化反應",
+                "D) 肌肉纖維受熱發生之蛋白變性反應"
+            ],
+            answer: 1,
+            exp: "梅納反應為還原糖羰基與胺基酸胺基於高溫下發生之非酵素性褐變，產生複雜風味分子與類黑精。"
+        },
+        {
+            q: "關於人工甜味劑阿斯巴甜，下列敘述何者正確？",
+            options: [
+                "A) 其化學結構為無熱量之雙醣類衍生物",
+                "B) 該物質受熱後甜度將呈指數級距增加",
+                "C) 代謝產苯丙胺酸故特定基因缺陷忌食",
+                "D) 屬完全零熱量之人工化學合成代糖物"
+            ],
+            answer: 2,
+            exp: "阿斯巴甜由天門冬胺酸與苯丙胺酸構成，進入人體代謝出苯丙胺酸，苯酮尿症患者缺乏代謝酵素須避免食用。"
+        },
+        {
+            q: "富含不飽和脂肪酸的植物油放置過久產生油耗味，此為下列何種反應機制？",
+            options: [
+                "A) 脂肪酸雙鍵斷裂之自由基鏈鎖反應",
+                "B) 甘油三酯遇水解離之脂質水解反應",
+                "C) 脂肪酸與醇類結合之分子酯化反應",
+                "D) 不飽和脂肪酸加成之催化氫化反應"
+            ],
+            answer: 0,
+            exp: "脂質氧化酸敗依循起始、傳遞與終止三階段的自由基鏈鎖反應生成氫過氧化物，進而裂解為具異味之醛酮類。"
+        },
+        {
+            q: "添加抗壞血酸於食品中以防止氧化的化學原理為何？",
+            options: [
+                "A) 本身作強氧化劑以主動奪取環境電子",
+                "B) 本身作強還原劑以優先提供環境電子",
+                "C) 藉由解離質子降低酸鹼值以抑制氧化",
+                "D) 於表面形成緻密聚合物薄膜阻絕氧氣"
+            ],
+            answer: 1,
+            exp: "抗壞血酸具極佳供電子能力，優先與自由基反應並自身氧化成去氫抗壞血酸，保護食品成分免受氧化。"
+        },
+        {
+            q: "香腸與培根中常添加亞硝酸鹽，其主要保色機理為形成何種物質？",
+            options: [
+                "A) 與肌紅蛋白結合形成亞硝基肌紅蛋白",
+                "B) 與血紅素鐵結合形成穩定的氧化鐵紅",
+                "C) 催化肌肉蛋白水解產紅色游離胺基酸",
+                "D) 抑制脂肪氧化並還原變性之肌動蛋白"
+            ],
+            answer: 0,
+            exp: "亞硝酸鹽還原產生的氧化氮與肉類肌紅蛋白結合，加熱後形成穩定的亞硝基血色原，呈現典型粉紅色澤。"
+        },
+        {
+            q: "蘋果果肉切開後迅速變褐色的主要化學原因為何？",
+            options: [
+                "A) 果肉內部鐵離子接觸空氣發生氧化",
+                "B) 酵素催化多酚類物質氧化形成黑色素",
+                "C) 果糖與游離胺基酸發生梅納褐變反應",
+                "D) 抗壞血酸與氧氣結合產生有色衍生物"
+            ],
+            answer: 1,
+            exp: "此為典型酵素性褐變。多酚氧化酶催化酚類物質氧化成醌類，進而聚合形成黑色素。坊間流傳之鐵質氧化屬無科學根據之訛傳。"
+        },
+        {
+            q: "壽司冷藏後醋飯口感變得乾硬難以下嚥，微波加熱又恢復柔軟，此可逆物理化學變化的核心機制為？",
+            options: [
+                "A) 支鏈澱粉分子於低溫發生水解斷裂",
+                "B) 糊化澱粉於降溫時重新排列成結晶",
+                "C) 飯粒內部水分過度蒸發致質地硬化",
+                "D) 米粒內部儲存性蛋白低溫變性收縮"
+            ],
+            answer: 1,
+            exp: "此現象稱為澱粉老化。糊化後之直鏈澱粉分子於降溫過程中重新排列，藉由氫鍵結合形成結晶區導致質地變硬，受熱後可重新水合。"
+        },
+        {
+            q: "咖啡因達到提神效果的核心藥理機制為何？",
+            options: [
+                "A) 促進中樞神經系統大量合成多巴胺",
+                "B) 競爭性拮抗中樞神經內部腺苷受體",
+                "C) 擴張腦部血管以直接刺激大腦皮層",
+                "D) 抑制神經突觸乙醯膽鹼酯酶之活性"
+            ],
+            answer: 1,
+            exp: "咖啡因結構與腺苷相似，能競爭性結合腺苷受體，阻斷腺苷引發之疲勞與睡眠訊號，從而維持覺醒狀態。"
+        },
+        {
+            q: "烘焙使用的發粉作用產生氣體膨發的條件為何？",
+            options: [
+                "A) 僅需單純吸收環境熱能即可發生分解",
+                "B) 碳酸氫鈉與酸性鹽類於水溶液中反應",
+                "C) 依賴配方中之耐滲透壓酵母發酵產氣",
+                "D) 需藉由高濃度蔗糖溶液催化始可反應"
+            ],
+            answer: 1,
+            exp: "發粉屬化學膨鬆劑，為小蘇打與酸性鹽之混合物，遇水溶解後發生酸鹼中和反應並釋放二氧化碳氣體。"
+        },
+        {
+            q: "關於蛋白質熱變性，下列敘述何者正確？",
+            options: [
+                "A) 高溫直接斷裂多肽鏈中之共價胜肽鍵",
+                "B) 徹底改變該蛋白質分子內部一級結構",
+                "C) 破壞次級鍵致二三四級空間結構展開",
+                "D) 變性過程將導致蛋白質分子質量減損"
+            ],
+            answer: 2,
+            exp: "蛋白質變性主要破壞氫鍵、疏水鍵等弱作用力，導致空間構型展開，但不切斷共價胜肽鍵，一級結構維持不變。"
+        },
+        {
+            q: "吃辣椒所感知的辣味並非味覺，其受體機制為何？",
+            options: [
+                "A) 直接刺激舌乳頭結構之特異苦味受體",
+                "B) 結合痛覺離子通道引發熱痛神經訊號",
+                "C) 催化唾液澱粉酶分解並產生放熱反應",
+                "D) 暫時性阻斷味蕾細胞之神經傳導路徑"
+            ],
+            answer: 1,
+            exp: "辣椒素會結合並活化感覺神經元上的 TRPV1 受體，該受體原為感知高溫與痛覺之通道，故辣味本質為一種痛覺。"
+        },
+        {
+            q: "巧克力製作過程中需要調溫的物理化學原因為何？",
+            options: [
+                "A) 加熱蒸發原料內部所殘留之多餘水分",
+                "B) 誘導可可脂分子形成第五型穩定結晶",
+                "C) 促使配方中蔗糖晶體完全溶解於油脂",
+                "D) 破壞天然苦味物質以大幅提升其風味"
+            ],
+            answer: 1,
+            exp: "可可脂具多型性，調溫係透過特定溫度曲線控制晶種生成，確保形成光澤佳、口感脆之第五型穩定結晶。"
+        },
+        {
+            q: "高湯與海帶中的鮮味主要來自於何種胺基酸？",
+            options: [
+                "A) 具嘌呤核苷結構之游離鳥苷酸",
+                "B) 具酸性側鏈基團之游離麩胺酸",
+                "C) 具芳香側鏈基團之游離色胺酸",
+                "D) 具鹼性側鏈基團之游離離胺酸"
+            ],
+            answer: 1,
+            exp: "麩胺酸及其鈉鹽能與舌頭上之鮮味受體結合，為產生鮮味感知之核心化學物質。"
+        },
+        {
+            q: "紫高麗菜汁滴入檸檬汁後顏色由紫轉紅，其變色原理為何？",
+            options: [
+                "A) 檸檬酸具強還原力直接還原該色素分子",
+                "B) 系統溫度劇烈變化導致色素分子生裂解",
+                "C) 花青素受環境酸鹼值影響改變共軛結構",
+                "D) 維生素丙與天然色素沉澱引發光學散射"
+            ],
+            answer: 2,
+            exp: "花青素為天然酸鹼指示劑，於酸性下形成紅色黃酮陽離子結構，鹼性下則轉為藍綠色結構。"
+        },
+        {
+            q: "製作低糖果醬時，果膠形成凝膠網絡必須依賴何種條件？",
+            options: [
+                "A) 藉由大量添加蔗糖奪取周圍水分以引發凝膠",
+                "B) 提高系統酸鹼值至鹼性以中和表面電荷",
+                "C) 藉由添加二價金屬離子促使分子鏈交聯",
+                "D) 於高溫環境中持續熬煮長達一小時以上"
+            ],
+            answer: 2,
+            exp: "低甲氧基果膠無法單靠糖與酸形成凝膠，須依賴二價鈣離子於相鄰果膠分子羧基間形成蛋盒模型交聯。"
+        },
+        {
+            q: "綠茶中的茶多酚常被視為優良抗氧化劑，其分子結構具備何種特徵？",
+            options: [
+                "A) 具備多個可提供氫原子之游離酚羥基團",
+                "B) 具備高電負度且反應極強之鹵素取代基",
+                "C) 具備極度穩定不易斷裂之飽和烷烴長鏈",
+                "D) 具備可直接螯合環境游離氧之鐵金屬基"
+            ],
+            answer: 0,
+            exp: "茶多酚芳香環上之酚羥基極易提供氫原子給自由基，中斷自由基鏈鎖反應，自身轉化為穩定之醌類衍生物。"
+        },
+        {
+            q: "人造奶油中反式脂肪酸的主要生成途徑為何？",
+            options: [
+                "A) 蛋白質原料於極高溫下發生之裂解反應",
+                "B) 碳水化合物於過度加熱後之焦糖化反應",
+                "C) 液態植物油為提升熔點之部分氫化反應",
+                "D) 脂質受環境水分與酵素催化之水解反應"
+            ],
+            answer: 2,
+            exp: "植物油於進行部分氫化以提高熔點與穩定性之過程中，部分未飽和雙鍵發生異構化，由順式轉變為反式構型。"
+        },
+        {
+            q: "使用高濃度食鹽醃製食品以延長保存期限的物理化學機制為何？",
+            options: [
+                "A) 降低環境滲透壓迫使細胞膜發生碎裂化",
+                "B) 提高環境滲透壓致使微生物細胞生脫水",
+                "C) 氯離子穿透細胞膜直接破壞其核酸結構",
+                "D) 鈉離子與蛋白質結合引發其不可逆變性"
+            ],
+            answer: 1,
+            exp: "高鹽度大幅降低食品水活性並產生高滲透壓，導致微生物細胞內水分外流而質壁分離，喪失繁殖能力。"
+        },
+        {
+            q: "人體代謝酒精的過程中，主要負責將乙醇氧化為乙醛的酵素為何？",
+            options: [
+                "A) 肝臟微粒體系統分泌之細胞色素氧化酶",
+                "B) 肝細胞內質網合成之非特異性過氧化酶",
+                "C) 肝細胞質內負責催化氧化之乙醇脫氫酶",
+                "D) 胰臟分泌進入十二指腸之游離胰蛋白酶"
+            ],
+            answer: 2,
+            exp: "酒精進入肝臟後，首由乙醇脫氫酶將乙醇氧化為毒性較高之乙醛，繼而由乙醛脫氫酶氧化為無毒之乙酸。"
+        },
+        {
+            q: "發酵奶油相較於一般奶油具有特殊濃郁風味，主要來自於何種發酵代謝產物？",
+            options: [
+                "A) 脂肪酸不完全氧化所累積之游離甲醛物",
+                "B) 乳酸菌代謝檸檬酸所生成之雙乙醯分子",
+                "C) 酵母菌進行無氧發酵生成之乙醇衍生物",
+                "D) 脂質受解脂酵素水解生成之游離丁酸根"
+            ],
+            answer: 1,
+            exp: "乳酸菌發酵過程中代謝檸檬酸生成雙乙醯，此為賦予奶油典型香氣與堅果風味的關鍵揮發性化合物。"
+        }
+    ];
+
+    let questions = [];
+    let currentQ = 0;
+    let score = 0;
+
+    function initQuiz() {
+        // 隨機抽取 10 題
+        let shuffled = allQuestions.sort(() => 0.5 - Math.random());
+        questions = shuffled.slice(0, 10);
+        currentQ = 0;
+        score = 0;
+        showQuestion();
+    }
+
+    function showQuestion() {
+        document.getElementById('progress').innerText = `題目 ${currentQ + 1} / 10`;
+        document.getElementById('question-text').innerText = questions[currentQ].q;
+        document.getElementById('explanation-box').style.display = 'none';
+        document.getElementById('next-btn').style.display = 'none';
+        
+        let optsContainer = document.getElementById('options-container');
+        optsContainer.innerHTML = '';
+        
+        questions[currentQ].options.forEach((opt, index) => {
+            let div = document.createElement('div');
+            div.className = 'option';
+            div.innerText = opt;
+            div.onclick = () => selectAnswer(index, div);
+            optsContainer.appendChild(div);
+        });
+    }
+
+    function selectAnswer(index, element) {
+        let opts = document.querySelectorAll('.option');
+        if(opts[0].classList.contains('disabled')) return; // 已作答
+
+        let isCorrect = (index === questions[currentQ].answer);
+        if(isCorrect) {
+            element.classList.add('correct');
+            score += 10;
+        } else {
+            element.classList.add('incorrect');
+            opts[questions[currentQ].answer].classList.add('correct');
+        }
+
+        opts.forEach(opt => opt.classList.add('disabled'));
+        
+        let expBox = document.getElementById('explanation-box');
+        expBox.innerText = questions[currentQ].exp;
+        expBox.style.display = 'block';
+
+        let nextBtn = document.getElementById('next-btn');
+        nextBtn.innerText = (currentQ === 9) ? "查看測驗結果" : "下一題";
+        nextBtn.style.display = 'inline-block';
+    }
+
+    function nextQuestion() {
+        currentQ++;
+        if (currentQ < 10) {
+            showQuestion();
+        } else {
+            showResult();
+        }
+    }
+
+    function showResult() {
+        document.getElementById('quiz-container').style.display = 'none';
+        document.getElementById('result-container').style.display = 'block';
+        document.getElementById('final-score').innerText = score + " 分";
+        
+        let tier, desc;
+        if (score === 100) {
+            tier = "諾貝爾化學獎級學者";
+            desc = "完美精通分子機制，具備頂尖學術洞察力，無可挑惕的科學大師。";
+        } else if (score >= 80) {
+            tier = "頂尖實驗室學術菁英";
+            desc = "理論基底深厚，能精準剖析食品科學現象，展現卓越邏輯推理。";
+        } else if (score >= 60) {
+            tier = "堅實基礎科學探索者";
+            desc = "具備扎實化學素養，思維敏捷且潛力無窮，距離大師僅一步之遙。";
+        } else {
+            tier = "遊樂園快樂觀光體驗生";
+            desc = "化學旅程初啟，學理概念尚待建構，然求知精神與參與度值得嘉許。";
+        }
+        
+        document.getElementById('final-tier').innerText = tier;
+        document.getElementById('final-desc').innerText = desc;
+    }
+
+    window.onload = initQuiz;
+</script>
+
+</body>
+</html>
